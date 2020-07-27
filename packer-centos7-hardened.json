@@ -1,110 +1,31 @@
 {
-  "description": "Build non-marketplace hardened CentOS7 template",
-  "variables": {
-    "region": "us-east-1",
-    "project_name": "centos7",
-    "build_stage": "base",
-    "aws_ami_users": "",
-    "os_name": "centos",
-    "os_version": "7",
-    "root_device_size": "8",
-    "fs_type": "xfs",
-    "repo_baseurl": "mirror.centos.org",
-    "rpm_release_file": "centos-release-7-6.1810.2.el7.centos.x86_64.rpm",
-    "iso_checksum": "38d5d51d9d100fd73df031ffd6bd8b1297ce24660dc8c13a3b8b4534a4bd291c",
-    "iso_checksum_type": "sha256",
-    "iso_name": "http://mirror.cogentco.com/pub/linux/centos/7.6.1810/isos/x86_64/CentOS-7-x86_64-Minimal-1810.iso",
-    "metadata": "floppy/dummy_metadata.json"
-  },
-
-  "provisioners": [
-    {
-      "type": "file",
-      "only": ["amazon-chroot"],
-      "source": "files/10-growpart.cfg",
-      "destination": "/tmp/10-growpart.cfg"
-    },
-    {
-      "type": "file",
-      "only": ["amazon-chroot"],
-      "source": "files/cloud.cfg",
-      "destination": "/tmp/cloud.cfg"
-    },
-    {
-      "type": "file",
-      "source": "local/trusted-certs",
-      "destination": "/tmp"
-    },
-    {
-      "type": "shell",
-      "only": ["amazon-chroot"],
-      "environment_vars": [
-        "FS_TYPE={{user `fs_type`}}"
-      ],
-      "scripts": [
-        "scripts/amazon-chroot/01-packages.sh",
-        "scripts/amazon-chroot/02-config.sh",
-        "scripts/amazon-chroot/03-services.sh",
-        "scripts/amazon-chroot/04-network.sh",
-        "scripts/amazon-chroot/05-cloud-init.sh",
-        "scripts/amazon-chroot/06-grub.sh",
-        "scripts/amazon-chroot/07-cfninit.sh"
-      ]
-    },
-    {
-      "type": "shell",
-      "only": ["virtualbox-iso"],
-      "environment_vars": [
-        "FS_TYPE={{user `fs_type`}}"
-      ],
-      "scripts": [
-        "scripts/virtualbox-iso/01-packages.sh",
-        "scripts/virtualbox-iso/02-config.sh",
-        "scripts/virtualbox-iso/03-services.sh",
-        "scripts/virtualbox-iso/04-network.sh"
-      ]
-    },
-    {
-        "type": "ansible-local",
-        "playbook_file": "ansible/playbook.yml",
-        "role_paths": [
-            "ansible/roles"
-        ],
-        "playbook_dir": "ansible",
-        "galaxy_file": "ansible/requirements.yml"
-    },
-    {
-      "type": "shell",
-      "only": ["amazon-chroot"],
-      "environment_vars": [
-        "FS_TYPE={{user `fs_type`}}"
-      ],
-      "scripts": [
-        "scripts/amazon-chroot/08-cleanup.sh"
-      ]
-    },
-    {
-      "type": "shell",
-      "only": ["virtualbox-iso"],
-      "environment_vars": [
-        "FS_TYPE={{user `fs_type`}}"
-      ],
-      "scripts": [
-        "scripts/virtualbox-iso/08-cleanup.sh"
-      ]
-    }
-  ],
-
   "builders": [
     {
-      "type": "amazon-chroot",
-      "access_key": "{{user `aws_access_key`}}",
-      "secret_key": "{{user `aws_secret_key`}}",
-      "ami_name": "rhythmic/{{user `os_name`}}-{{user `os_version`}}-{{user `build_stage`}}-{{isotime \"2006-01-02-030405\" | clean_ami_name}}",
+      "ami_block_device_mappings": [
+        {
+          "delete_on_termination": true,
+          "device_name": "/dev/xvda",
+          "volume_type": "gp2"
+        }
+      ],
       "ami_description": "{{user `os_name`}} {{user `os_version`}} {{user `build_stage`}} image built on {{isotime \"2006-01-02\"}}",
+      "ami_name": "rhythmic/{{user `os_name`}}-{{user `os_version`}}-{{user `build_stage`}}-{{isotime \"2006-01-02-030405\" | clean_resource_name}}",
       "ami_users": "{{user `aws_ami_users`}}",
-      "from_scratch": true,
       "ami_virtualization_type": "hvm",
+      "copy_files": [
+        "/etc/resolv.conf"
+      ],
+      "from_scratch": true,
+      "post_mount_commands": [
+        "echo 'RPM initial setup'",
+        "rpm --root={{.MountPath}} --initdb",
+        "echo 'Install base OS release RPM to lay down the basics in chroot'",
+        "rpm --nodeps --root={{.MountPath}} -ivh http://{{user `repo_baseurl`}}/{{user `os_name`}}/{{user `os_version`}}/os/x86_64/Packages/{{user `rpm_release_file`}}",
+        "echo 'Make sure yum and deltarpm are installed'",
+        "yum --installroot={{.MountPath}} -y install yum deltarpm",
+        "echo 'Write out variable for use by provisioning scripts'",
+        "echo 'DEVICE={{.Device}}' > {{.MountPath}}/var/tmp/env_vars"
+      ],
       "pre_mount_commands": [
         "echo 'Make sure gdisk is installed on builder'",
         "yum -y install gdisk",
@@ -116,6 +37,33 @@
         "mkfs.{{user `fs_type`}} -L root {{.Device}}1",
         "sync"
       ],
+      "profile": "personal",
+      "root_device_name": "/dev/xvda",
+      "root_volume_size": "{{user `root_device_size`}}",
+      "tags": {
+        "buildDate": "{{isotime \"2006-01-02\"}}",
+        "buildStage": "{{user `build_stage`}}",
+        "os": "{{user `os_name`}}",
+        "version": "{{user `os_version`}}"
+      },
+      "type": "amazon-chroot"
+    },
+    {
+      "ami_block_device_mappings": [
+        {
+          "delete_on_termination": true,
+          "device_name": "/dev/xvda",
+          "volume_type": "gp2"
+        }
+      ],
+      "ami_description": "{{user `os_name`}} {{user `os_version`}} {{user `build_stage`}} image built on {{isotime \"2020-06-23\"}}",
+      "ami_name": "rhythmic/{{user `os_name`}}-{{user `os_version`}}-{{user `build_stage`}}-{{isotime \"2020-06-23-030405\" | clean_resource_name}}",
+      "ami_users": "{{user `aws_ami_users`}}",
+      "ami_virtualization_type": "hvm",
+      "copy_files": [
+        "/etc/resolv.conf"
+      ],
+      "instance_type": "t2.micro",
       "post_mount_commands": [
         "echo 'RPM initial setup'",
         "rpm --root={{.MountPath}} --initdb",
@@ -124,41 +72,232 @@
         "echo 'Make sure yum and deltarpm are installed'",
         "yum --installroot={{.MountPath}} -y install yum deltarpm",
         "echo 'Write out variable for use by provisioning scripts'",
-        "echo 'DEVICE={{.Device}}' > {{.MountPath}}/tmp/env_vars"
+        "echo 'DEVICE={{.Device}}' > {{.MountPath}}/var/tmp/env_vars"
       ],
-      "root_volume_size": "{{user `root_device_size`}}",
+      "pre_mount_commands": [
+        "echo 'Make sure gdisk is installed on builder'",
+        "yum -y install gdisk",
+        "echo 'Partition device'",
+        "sgdisk -og {{.Device}}",
+        "sgdisk -n 1:4096:0 -c 1:\"Linux\" -t 1:8300 {{.Device}}",
+        "sgdisk -n 128:2048:4095 -c 128:\"BIOS Boot Partition\" -t 128:ef02 {{.Device}}",
+        "echo 'Create desired filesystem on device'",
+        "mkfs.{{user `fs_type`}} -L root {{.Device}}1",
+        "sync"
+      ],
+      "profile": "personal",
+      "region": "us-east-1",
       "root_device_name": "/dev/xvda",
-      "ami_block_device_mappings": [
-        {
-          "device_name": "/dev/xvda",
-          "delete_on_termination": true,
-          "volume_type": "gp2"
-        }
-      ],
-      "copy_files": ["/etc/resolv.conf"],
+      "root_volume_size": "{{user `root_device_size`}}",
+      "source_ami": "ami-4bf3d731",
+      "ssh_username": "centos",
       "tags": {
-        "buildStage": "{{user `build_stage`}}",
         "buildDate": "{{isotime \"2006-01-02\"}}",
+        "buildStage": "{{user `build_stage`}}",
         "os": "{{user `os_name`}}",
         "version": "{{user `os_version`}}"
-      }
+      },
+      "type": "amazon-ebs"
     },
     {
-      "type": "virtualbox-iso",
-       "boot_command": ["<tab> text ks=http://{{.HTTPIP}}:{{.HTTPPort}}/ks-default.cfg<enter><wait>"],
+      "boot_command": [
+        "<tab> text ks=http://{{.HTTPIP}}:{{.HTTPPort}}/ks-default.cfg<enter><wait>"
+      ],
       "boot_wait": "10s",
-      "disk_size": 10240,
+      "disk_size": "{{user `disk_size`}}",
       "guest_os_type": "RedHat_64",
-      "headless": "true",
+      "headless": "false",
       "http_directory": "http",
-      "iso_checksum": "{{user `iso_checksum`}}",
-      "iso_checksum_type": "{{user `iso_checksum_type`}}",
+      "iso_checksum": "{{user `iso_checksum_type`}}:{{user `iso_checksum`}}",
       "iso_url": "{{user `iso_name`}}",
       "output_directory": "packer-{{user `template`}}-vbox",
+      "pause_before_connecting": "5m",
       "shutdown_command": "/sbin/halt -h -p",
-      "ssh_username": "root",
-      "ssh_password": "",
+      "ssh_password": "{{ user `ssh_password` }}",
+      "ssh_username": "{{ user `ssh_username` }}",
+      "type": "virtualbox-iso",
+      "vboxmanage": [
+        [
+          "modifyvm",
+          "{{.Name}}",
+          "--vram",
+          "64"
+        ]
+      ],
+      "vm_name": "{{ user `template` }}"
+    },
+    {
+      "boot_command": [
+        "c  setparams 'kickstart' <enter> linuxefi /images/pxeboot/vmlinuz inst.stage2=hd:LABEL=CentOS\\x207\\x20x\\86_64 inst.ks=http://{{.HTTPIP}}:{{.HTTPPort}}/ks-default-hyperv.cfg<enter> initrdefi /images/pxeboot/initrd.img<enter> boot<enter>"
+      ],
+      "boot_wait": "5s",
+      "communicator": "ssh",
+      "cpus": 4,
+      "differencing_disk": "true",
+      "disk_block_size": "1",
+      "disk_size": "{{user `disk_size`}}",
+      "enable_dynamic_memory": "false",
+      "enable_mac_spoofing": "true",
+      "enable_secure_boot": false,
+      "enable_virtualization_extensions": "true",
+      "generation": 2,
+      "guest_additions_mode": "disable",
+      "headless": "false",
+      "http_directory": "http",
+      "iso_checksum": "{{user `iso_checksum_type`}}:{{user `iso_checksum`}}",
+      "iso_url": "{{user `iso_name`}}",
+      "memory": "6144",
+      "output_directory": "packer-{{user `template`}}-hyperv",
+      "shutdown_command": "shutdown -P now",
+      "shutdown_timeout": "30m",
+      "ssh_password": "centos",
+      "ssh_port": 22,
+      "ssh_timeout": "4h",
+      "ssh_username": "centos",
+      "type": "hyperv-iso",
       "vm_name": "{{ user `template` }}"
     }
-  ]
+  ],
+  "description": "Build non-marketplace hardened CentOS7 template",
+  "provisioners": [
+    {
+      "destination": "/var/tmp/10-growpart.cfg",
+      "only": [
+        "amazon-chroot"
+      ],
+      "source": "files/10-growpart.cfg",
+      "type": "file"
+    },
+    {
+      "destination": "/var/tmp/cloud.cfg",
+      "only": [
+        "amazon-chroot"
+      ],
+      "source": "files/cloud.cfg",
+      "type": "file"
+    },
+    {
+      "destination": "/var/tmp",
+      "source": "local/trusted-certs",
+      "type": "file"
+    },
+    {
+      "environment_vars": [
+        "FS_TYPE={{user `fs_type`}}"
+      ],
+      "only": [
+        "amazon-chroot"
+      ],
+      "scripts": [
+        "scripts/amazon-chroot/01-packages.sh",
+        "scripts/amazon-chroot/02-config.sh",
+        "scripts/amazon-chroot/03-services.sh",
+        "scripts/amazon-chroot/04-network.sh",
+        "scripts/amazon-chroot/05-cloud-init.sh",
+        "scripts/amazon-chroot/06-grub.sh",
+        "scripts/amazon-chroot/07-cfninit.sh"
+      ],
+      "type": "shell"
+    },
+    {
+      "environment_vars": [
+        "FS_TYPE={{user `fs_type`}}"
+      ],
+      "only": [
+        "virtualbox-iso"
+      ],
+      "scripts": [
+        "scripts/virtualbox-iso/01-packages.sh",
+        "scripts/virtualbox-iso/02-config.sh",
+        "scripts/virtualbox-iso/03-services.sh",
+        "scripts/virtualbox-iso/04-network.sh"
+      ],
+      "type": "shell"
+    },
+    {
+      "environment_vars": [
+        "FS_TYPE={{user `fs_type`}}"
+      ],
+      "execute_command": "echo 'centos' | {{.Vars}} sudo -S -E sh -eux '{{.Path}}'",
+      "only": [
+        "hyperv-iso"
+      ],
+      "scripts": [
+        "scripts/hyperv-iso/01-packages.sh",
+        "scripts/hyperv-iso/02-config.sh",
+        "scripts/hyperv-iso/03-services.sh",
+        "scripts/hyperv-iso/04-network.sh"
+      ],
+      "type": "shell"
+    },
+    {
+      "galaxy_file": "ansible/requirements.yml",
+      "playbook_dir": "ansible",
+      "playbook_file": "ansible/playbook.yml",
+      "role_paths": [
+        "ansible/roles"
+      ],
+      "type": "ansible-local"
+    },
+    {
+      "environment_vars": [
+        "FS_TYPE={{user `fs_type`}}"
+      ],
+      "only": [
+        "amazon-chroot"
+      ],
+      "scripts": [
+        "scripts/amazon-chroot/08-cleanup.sh"
+      ],
+      "type": "shell"
+    },
+    {
+      "environment_vars": [
+        "FS_TYPE={{user `fs_type`}}"
+      ],
+      "only": [
+        "virtualbox-iso"
+      ],
+      "scripts": [
+        "scripts/virtualbox-iso/08-cleanup.sh"
+      ],
+      "type": "shell"
+    },
+    {
+      "environment_vars": [
+        "FS_TYPE={{user `fs_type`}}"
+      ],
+      "only": [
+        "hyperv-iso"
+      ],
+      "scripts": [
+        "scripts/hyperv-iso/08-cleanup.sh"
+      ],
+      "type": "shell"
+    }
+  ],
+  "sensitive-variables": [
+    "ssh_password",
+    "centos"
+  ],
+  "variables": {
+    "aws_ami_users": "",
+    "build_stage": "base",
+    "disk_size": "81920",
+    "fs_type": "xfs",
+    "iso_checksum": "659691c28a0e672558b003d223f83938f254b39875ee7559d1a4a14c79173193",
+    "iso_checksum_type": "sha256",
+    "iso_name": "https://mirrors.radwebhosting.com/centos/7/isos/x86_64/CentOS-7-x86_64-Minimal-2003.iso",
+    "metadata": "floppy/dummy_metadata.json",
+    "os_name": "centos",
+    "os_version": "7",
+    "project_name": "centos7",
+    "region": "us-east-1",
+    "repo_baseurl": "mirror.centos.org",
+    "root_device_size": "8",
+    "rpm_release_file": "centos-release-7-7.1908.0.el7.centos.x86_64.rpm",
+    "ssh_username": "centos",
+    "template": ""
+  }
 }
+
