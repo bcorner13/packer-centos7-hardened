@@ -1,5 +1,7 @@
 #!/bin/sh -x
-
+echo "############"
+echo "####DEBUG###"
+lsof /tmp
 #Remove temp files
 rm -f /var/tmp/env_vars /var/tmp/packer-provisioner-ansible-local /var/tmp/trusted-certs
 
@@ -11,6 +13,10 @@ truncate -c -s 0 /var/log/yum.log
 # Lock the root user
 passwd -d root
 passwd -l root
+
+# Re-enable serivices shutdown for CIS Benchmark testing
+systemctl -q start firewalld
+systemctl -q start tuned
 
 # Shred SSH key files
 shred -uf /etc/ssh/*_key
