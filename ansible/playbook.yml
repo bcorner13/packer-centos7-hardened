@@ -2,8 +2,17 @@
 ---
 - hosts: localhost
   connection: local
-  gather_facts: true
+  gather_facts: yes
   become: yes
+  pre_tasks:
+    - name: install packages for testing under packer
+      yum:
+        name: [ 'selinux-policy',
+            'libselinux-python',
+            'openssh-server',
+            'which',
+            'python-jmespath' ]
+        state: present
   roles:
     - base
-    - ansible-centos7-cis
+    - RHEL7-CIS

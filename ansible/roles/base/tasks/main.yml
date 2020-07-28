@@ -17,7 +17,7 @@
     group: root
     mode: 0644
   with_fileglob:
-    - "/tmp/trusted-certs/*.pem"
+    - "/var/tmp/trusted-certs/*.pem"
 
 - name: extract the CA certificate(s)
   command: update-ca-trust extract
