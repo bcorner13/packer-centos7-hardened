@@ -15,7 +15,7 @@
         state: present
   roles:
     - base
-    - role: RHEL7-CIS
-      vars:
-        rhel7cis_rule_1_1_1_8: false
-        rhel7cis_rhnsd_required: false
+    # - role: RHEL7-CIS
+    #   vars:
+    #     rhel7cis_rule_1_1_1_8: false
+    #     rhel7cis_rhnsd_required: false
