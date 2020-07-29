@@ -1,5 +1,5 @@
-CentOS7 Hardened Packer Builder
-================
+# CentOS7 Hardened Packer Builder
+---
 
 Builds CentOS7 AMIs that are hardened according to CIS recommendations, free
 of marketplace restrictions.
@@ -7,16 +7,24 @@ of marketplace restrictions.
 It does a CIS hardening appropriate as a starting point. It does not set up
 central authentication or centralized syslogging for you.
 
-This script supports both VirtualBox (OVF) and AWS.
+This script supports both VirtualBox (OVF) Hyper-V, Docker and AWS.
 
-Trusted Certificates
-------------------
+## Trusted Certificates
+---
 Specify certificates in `local/trusted-certs`, which will be automatically
 added to the trust anchors. Certificates must be placed in individual files with
 the `.pem` extension.
 
-AWS Notes
-------------------
+## Create trusted certificates
+---
+On OSX:
+`brew install openssl`
+
+`openssl req -x509 -newkey rsa:4096 -keyout local/trusted-certs/packer-key.pem -out local/trusted-certs/packer-cert.pem -days 365 -subj '/CN=localhost' -nodes`
+
+
+## AWS Notes
+---
 
 It is easiest to build for AWS from an EC2 instance with an appropriate IAM
 role. However, you can build from anywhere by specifying an access and secret
@@ -42,6 +50,12 @@ that matches the password in the packer config.
 To build for VirtualBox:
 
 ```packer build -only=virtualbox-iso packer-centos7-hardened.json```
+
+Status of Build
+-----------------
+
+Using the generic RHEL-CIS I am hitting an error with restarting tmp.mount service.  Still in Use.
+
 
 Acknowledgments
 ------------------

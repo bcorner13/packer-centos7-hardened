@@ -9,9 +9,10 @@ yum -y install @core epel-release authconfig audit deltarpm sudo chrony \
   python-backports python-backports-ssl_match_hostname python-chardet \
   python-crypto python-jinja2 python-msgpack python-ordereddict \
   python-requests python-six python-setuptools python-urllib3 python-zmq \
-  PyYAML screen unzip vim-common vim-enhanced wget yum-utils zeromq3 zip
+  PyYAML screen unzip vim-common vim-enhanced wget yum-utils zeromq3 zip \
+  python3
 
-# Remove the packages we don't want or need in our AWS base image
+# Remove the packages we don't want or need in our base image
 yum -y remove hwdata linux-firmware dracut-config-rescue NetworkManager \
   aic94xx-firmware alsa-firmware alsa-lib alsa-tools-firmware biosdevname \
   iprutils ivtv-firmware iwl100-firmware iwl1000-firmware iwl105-firmware \
@@ -26,5 +27,5 @@ yum update -y
 
 # pip comes from epel, so this needs to be installed after that.
 yum install -y python-pip
-
+pip install --upgrade pip
 pip install ansible

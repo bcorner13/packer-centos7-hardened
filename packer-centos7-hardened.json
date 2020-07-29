@@ -90,7 +90,8 @@
       "root_device_name": "/dev/xvda",
       "root_volume_size": "{{user `root_device_size`}}",
       "source_ami": "ami-4bf3d731",
-      "ssh_username": "centos",
+      "ssh_username": "{{ user `ssh_username` }}",
+      "ssh_password": "{{ user `ssh_password` }}",
       "tags": {
         "buildDate": "{{isotime \"2006-01-02\"}}",
         "buildStage": "{{user `build_stage`}}",
@@ -112,9 +113,10 @@
       "iso_url": "{{user `iso_name`}}",
       "output_directory": "packer-{{user `template`}}-vbox",
       "pause_before_connecting": "5m",
-      "shutdown_command": "/sbin/halt -h -p",
+      "shutdown_command": "sudo /sbin/halt -h -p",
       "ssh_password": "{{ user `ssh_password` }}",
       "ssh_username": "{{ user `ssh_username` }}",
+      "ssh_timeout": "30m",
       "type": "virtualbox-iso",
       "vboxmanage": [
         [
@@ -150,10 +152,10 @@
       "output_directory": "packer-{{user `template`}}-hyperv",
       "shutdown_command": "shutdown -P now",
       "shutdown_timeout": "30m",
-      "ssh_password": "centos",
       "ssh_port": 22,
       "ssh_timeout": "4h",
-      "ssh_username": "centos",
+      "ssh_username": "{{ user `ssh_username` }}",
+      "ssh_password": "{{ user `ssh_password` }}",
       "type": "hyperv-iso",
       "vm_name": "{{ user `template` }}"
     }
@@ -182,6 +184,20 @@
       "type": "file"
     },
     {
+      "destination": "/var/tmp/motd.sh",
+      "source": "files/motd",
+      "type": "file"
+    },
+    {
+      "inline": [
+        "mv /var/tmp/motd.sh /etc/motd.sh",
+        "chmod +x /etc/motd.sh",
+        "echo \"/etc/motd.sh\" >> /etc/profile"
+      ],
+      "execute_command": "sudo {{.Vars}} sh {{.Path}}",
+      "type": "shell"
+    },
+    {
       "environment_vars": [
         "FS_TYPE={{user `fs_type`}}"
       ],
@@ -197,6 +213,7 @@
         "scripts/amazon-chroot/06-grub.sh",
         "scripts/amazon-chroot/07-cfninit.sh"
       ],
+      "execute_command": "sudo {{.Vars}} sh {{.Path}}",
       "type": "shell"
     },
     {
@@ -212,13 +229,13 @@
         "scripts/virtualbox-iso/03-services.sh",
         "scripts/virtualbox-iso/04-network.sh"
       ],
+      "execute_command": "sudo {{.Vars}} sh {{.Path}}",
       "type": "shell"
     },
     {
       "environment_vars": [
         "FS_TYPE={{user `fs_type`}}"
       ],
-      "execute_command": "echo 'centos' | {{.Vars}} sudo -S -E sh -eux '{{.Path}}'",
       "only": [
         "hyperv-iso"
       ],
@@ -228,12 +245,14 @@
         "scripts/hyperv-iso/03-services.sh",
         "scripts/hyperv-iso/04-network.sh"
       ],
+      "execute_command": "sudo {{.Vars}} sh {{.Path}}",
       "type": "shell"
     },
     {
       "galaxy_file": "ansible/requirements.yml",
       "playbook_dir": "ansible",
       "playbook_file": "ansible/playbook.yml",
+      "staging_directory": "/var/tmp/staging_directory/",
       "role_paths": [
         "ansible/roles"
       ],
@@ -249,6 +268,7 @@
       "scripts": [
         "scripts/amazon-chroot/08-cleanup.sh"
       ],
+      "execute_command": "sudo {{.Vars}} sh {{.Path}}",
       "type": "shell"
     },
     {
@@ -261,6 +281,7 @@
       "scripts": [
         "scripts/virtualbox-iso/08-cleanup.sh"
       ],
+      "execute_command": "sudo {{.Vars}} sh {{.Path}}",
       "type": "shell"
     },
     {
@@ -273,6 +294,7 @@
       "scripts": [
         "scripts/hyperv-iso/08-cleanup.sh"
       ],
+      "execute_command": "sudo {{.Vars}} sh {{.Path}}",
       "type": "shell"
     }
   ],
@@ -283,7 +305,7 @@
   "variables": {
     "aws_ami_users": "",
     "build_stage": "base",
-    "disk_size": "81920",
+    "disk_size": "102400",
     "fs_type": "xfs",
     "iso_checksum": "659691c28a0e672558b003d223f83938f254b39875ee7559d1a4a14c79173193",
     "iso_checksum_type": "sha256",
@@ -297,7 +319,7 @@
     "root_device_size": "8",
     "rpm_release_file": "centos-release-7-7.1908.0.el7.centos.x86_64.rpm",
     "ssh_username": "centos",
+    "ssh_password": "centos",
     "template": ""
   }
 }
-
