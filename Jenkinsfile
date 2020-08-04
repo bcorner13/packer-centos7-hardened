@@ -11,7 +11,7 @@ pipeline {
 	  stage('Run-Packer') {
 			steps {
 				withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "awskey-${params.ACCOUNT}"]]) {
-				sh script: "cd packer-centos7-hardened; packer build -only=amazon-chroot packer-centos7-hardened.json"
+				sh script: "cd packer-centos7-hardened; packer validate -only=amazon-chroot packer-centos7-hardened.json"
 				}
 			}
 	  }
