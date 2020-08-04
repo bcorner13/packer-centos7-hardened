@@ -9,7 +9,7 @@
         }
       ],
       "ami_description": "{{user `os_name`}} {{user `os_version`}} {{user `build_stage`}} image built on {{isotime \"2006-01-02\"}}",
-      "ami_name": "rhythmic/{{user `os_name`}}-{{user `os_version`}}-{{user `build_stage`}}-{{isotime \"2006-01-02-030405\" | clean_resource_name}}",
+      "ami_name": "kemper/{{user `os_name`}}-{{user `os_version`}}-{{user `build_stage`}}-{{isotime \"2006-01-02-030405\" | clean_resource_name}}",
       "ami_users": "{{user `aws_ami_users`}}",
       "ami_virtualization_type": "hvm",
       "copy_files": [
@@ -37,7 +37,6 @@
         "mkfs.{{user `fs_type`}} -L root {{.Device}}1",
         "sync"
       ],
-      "profile": "personal",
       "root_device_name": "/dev/xvda",
       "root_volume_size": "{{user `root_device_size`}}",
       "tags": {
@@ -56,40 +55,31 @@
           "volume_type": "gp2"
         }
       ],
+      "launch_block_device_mappings": [
+      {
+        "volume_type": "gp2",
+        "device_name": "/dev/xvda",
+        "volume_size": "{{user `root_device_size`}}",
+        "delete_on_termination": true
+      }
+      ],
       "ami_description": "{{user `os_name`}} {{user `os_version`}} {{user `build_stage`}} image built on {{isotime \"2020-06-23\"}}",
-      "ami_name": "rhythmic/{{user `os_name`}}-{{user `os_version`}}-{{user `build_stage`}}-{{isotime \"2020-06-23-030405\" | clean_resource_name}}",
+      "ami_name": "kemper/{{user `os_name`}}-{{user `os_version`}}-{{user `build_stage`}}-{{isotime \"2020-06-23-030405\" | clean_resource_name}}",
       "ami_users": "{{user `aws_ami_users`}}",
       "ami_virtualization_type": "hvm",
-      "copy_files": [
-        "/etc/resolv.conf"
-      ],
       "instance_type": "t2.micro",
-      "post_mount_commands": [
-        "echo 'RPM initial setup'",
-        "rpm --root={{.MountPath}} --initdb",
-        "echo 'Install base OS release RPM to lay down the basics in chroot'",
-        "rpm --nodeps --root={{.MountPath}} -ivh http://{{user `repo_baseurl`}}/{{user `os_name`}}/{{user `os_version`}}/os/x86_64/Packages/{{user `rpm_release_file`}}",
-        "echo 'Make sure yum and deltarpm are installed'",
-        "yum --installroot={{.MountPath}} -y install yum deltarpm",
-        "echo 'Write out variable for use by provisioning scripts'",
-        "echo 'DEVICE={{.Device}}' > {{.MountPath}}/var/tmp/env_vars"
-      ],
-      "pre_mount_commands": [
-        "echo 'Make sure gdisk is installed on builder'",
-        "yum -y install gdisk",
-        "echo 'Partition device'",
-        "sgdisk -og {{.Device}}",
-        "sgdisk -n 1:4096:0 -c 1:\"Linux\" -t 1:8300 {{.Device}}",
-        "sgdisk -n 128:2048:4095 -c 128:\"BIOS Boot Partition\" -t 128:ef02 {{.Device}}",
-        "echo 'Create desired filesystem on device'",
-        "mkfs.{{user `fs_type`}} -L root {{.Device}}1",
-        "sync"
-      ],
-      "profile": "personal",
       "region": "us-east-1",
-      "root_device_name": "/dev/xvda",
-      "root_volume_size": "{{user `root_device_size`}}",
-      "source_ami": "ami-4bf3d731",
+
+      "source_ami_filter": {
+        "filters": {
+        "virtualization-type": "hvm",
+        "name": "ubuntu/images/*ubuntu-xenial-16.04-amd64-server-*",
+        "root-device-type": "ebs"
+        },
+        "owners": ["099720109477"],
+        "most_recent": true
+      },
+      "encrypt_boot": true,
       "ssh_username": "{{ user `ssh_username` }}",
       "ssh_password": "{{ user `ssh_password` }}",
       "tags": {
