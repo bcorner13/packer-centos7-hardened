@@ -3,7 +3,7 @@ pipeline {
     stages {
 	  stage('Git Repository') {
 			steps {
-        dir('.') {
+        dir('packer-centos7-hardend') {
           git url: "git@git.ipacc.com:AutomationTooling/packer-centos7-hardened.git", branch: 'master', credentialsId: 'jenkins_gitlab'
         }
 			}
@@ -11,8 +11,10 @@ pipeline {
 	  stage('Run-Packer') {
 			steps {
 				withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: "awskey-${params.ACCOUNT}"]]) {
-				sh script: "cd packer-centos7-hardened; packer validate -only=amazon-chroot packer-centos7-hardened.json"
-				}
+          dir('packer-centos7-hardened'){
+            sh script: "packer validate -only=amazon-chroot packer-centos7-hardened.json"
+          }
+        }
 			}
 	  }
   }
