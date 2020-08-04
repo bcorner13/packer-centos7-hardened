@@ -3,7 +3,7 @@ pipeline {
     stages {
 	  stage('Git Repository') {
 			steps {
-        dir('stack-configuration') {
+        dir('.') {
           git url: "git@git.ipacc.com:AutomationTooling/packer-centos7-hardened.git", branch: 'master', credentialsId: 'jenkins_gitlab'
         }
 			}
