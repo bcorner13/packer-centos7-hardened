@@ -9,7 +9,7 @@
         }
       ],
       "ami_description": "{{user `os_name`}} {{user `os_version`}} {{user `build_stage`}} image built on {{isotime \"2006-01-02\"}}",
-      "ami_name": "kemper/{{user `os_name`}}-{{user `os_version`}}-{{user `build_stage`}}-{{isotime \"2006-01-02-030405\" | clean_resource_name}}",
+      "ami_name": "{{user `os_name`}}-{{user `os_version`}}-{{user `build_stage`}}-{{isotime \"2006-01-02-030405\" | clean_resource_name}}",
       "ami_users": "{{user `aws_ami_users`}}",
       "ami_virtualization_type": "hvm",
       "copy_files": [
